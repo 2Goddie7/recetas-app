@@ -10,10 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../../src/presentation/hooks/useAuth";
-import { useRecipes } from "../../src/presentation/hooks/useRecipes";
-import { globalStyles } from "../../src/styles/globalStyles";
-import { colors, fontSize, spacing } from "../../src/styles/theme";
+import { useAuth } from "../../../src/presentation/hooks/useAuth";
+import { useRecipes } from "../../../src/presentation/hooks/useRecipes";
+import { globalStyles } from "../../../src/styles/globalStyles";
+import { colors, fontSize, spacing } from "../../../src/styles/theme";
 
 export default function EditarRecetaScreen() {
   const { id } = useLocalSearchParams();

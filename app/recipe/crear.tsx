@@ -11,15 +11,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../../src/presentation/hooks/useAuth";
-import { useRecipes } from "../../src/presentation/hooks/useRecipes";
-import { globalStyles } from "../../src/styles/globalStyles";
+import { useAuth } from "../../../src/presentation/hooks/useAuth";
+import { useRecipes } from "../../../src/presentation/hooks/useRecipes";
+import { globalStyles } from "../../../src/styles/globalStyles";
 import {
   borderRadius,
   colors,
   fontSize,
   spacing,
-} from "../../src/styles/theme";
+} from "../../../src/styles/theme";
 
 export default function CrearRecetaScreen() {
   const { usuario, esChef } = useAuth();
