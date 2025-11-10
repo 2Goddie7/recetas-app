@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,55 +12,61 @@ import {
 } from "react-native";
 import { useAuth } from "../../src/presentation/hooks/useAuth";
 import { globalStyles } from "../../src/styles/globalStyles";
-import {
-  borderRadius,
-  colors,
-  fontSize,
-  spacing,
-} from "../../src/styles/theme";
+import { colors, fontSize, spacing } from "../../src/styles/theme";
 
 export default function RegistroScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rolSeleccionado, setRolSeleccionado] = useState<"chef" | "usuario">(
-    "usuario" // Por defecto: usuario
-  );
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [rol, setRol] = useState<"chef" | "usuario">("usuario");
   const [cargando, setCargando] = useState(false);
+
   const { registrar } = useAuth();
   const router = useRouter();
 
   const handleRegistro = async () => {
-    // VALIDACIÓN 1: Campos vacíos
-    if (!email || !password) {
-      Alert.alert("Error", "Completa todos los campos");
+    // Validaciones
+    if (!email || !password || !confirmPassword) {
+      Alert.alert("Error", "Por favor completa todos los campos");
       return;
     }
 
-    // VALIDACIÓN 2: Longitud de contraseña
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Las contraseñas no coinciden");
+      return;
+    }
+
     if (password.length < 6) {
       Alert.alert("Error", "La contraseña debe tener al menos 6 caracteres");
       return;
     }
 
-    // REGISTRO
+    // Registro
     setCargando(true);
-    const resultado = await registrar(email, password, rolSeleccionado);
+    const resultado = await registrar(email, password, rol);
     setCargando(false);
 
     if (resultado.success) {
-      // Éxito: Redirigir a login
-      Alert.alert("Éxito", "Cuenta creada correctamente", [
-        { text: "OK", onPress: () => router.replace("/auth/login") },
-      ]);
+      Alert.alert(
+        "¡Registro Exitoso!",
+        "Tu cuenta ha sido creada. Ya puedes iniciar sesión.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.replace("/auth/login"),
+          },
+        ]
+      );
     } else {
       Alert.alert("Error", resultado.error || "No se pudo crear la cuenta");
     }
   };
 
   return (
-    <View style={globalStyles.container}>
+    <ScrollView style={globalStyles.container}>
       <View style={globalStyles.contentPadding}>
-        <Text style={globalStyles.title}>Crear Cuenta</Text>
+        <Text style={styles.titulo}>Crear Cuenta</Text>
+        <Text style={styles.subtitulo}>Únete a Recetas App</Text>
 
         <TextInput
           style={globalStyles.input}
@@ -78,104 +85,143 @@ export default function RegistroScreen() {
           secureTextEntry
         />
 
-        {/* SELECTOR DE ROL */}
-        <Text style={styles.labelRol}>Selecciona tu rol:</Text>
+        <TextInput
+          style={globalStyles.input}
+          placeholder="Confirmar Contraseña"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+        />
+
+        <Text style={styles.labelRol}>Tipo de cuenta:</Text>
         <View style={styles.contenedorRoles}>
-          {/* BOTÓN: Usuario */}
           <TouchableOpacity
             style={[
               styles.botonRol,
-              rolSeleccionado === "usuario" && styles.botonRolActivo,
+              rol === "usuario" && styles.botonRolActivo,
             ]}
-            onPress={() => setRolSeleccionado("usuario")}
+            onPress={() => setRol("usuario")}
           >
             <Text
               style={[
                 styles.textoRol,
-                rolSeleccionado === "usuario" && styles.textoRolActivo,
+                rol === "usuario" && styles.textoRolActivo,
               ]}
             >
-              Usuario
+              👤 Usuario
+            </Text>
+            <Text style={styles.descripcionRol}>
+              Ver y buscar recetas
             </Text>
           </TouchableOpacity>
 
-          {/* BOTÓN: Chef */}
           <TouchableOpacity
             style={[
               styles.botonRol,
-              rolSeleccionado === "chef" && styles.botonRolActivo,
+              rol === "chef" && styles.botonRolActivo,
             ]}
-            onPress={() => setRolSeleccionado("chef")}
+            onPress={() => setRol("chef")}
           >
             <Text
               style={[
                 styles.textoRol,
-                rolSeleccionado === "chef" && styles.textoRolActivo,
+                rol === "chef" && styles.textoRolActivo,
               ]}
             >
-              Chef
+              👨‍🍳 Chef
+            </Text>
+            <Text style={styles.descripcionRol}>
+              Crear y compartir recetas
             </Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          style={[globalStyles.button, globalStyles.buttonPrimary]}
+          style={[
+            globalStyles.button,
+            globalStyles.buttonPrimary,
+            styles.botonRegistro,
+          ]}
           onPress={handleRegistro}
           disabled={cargando}
         >
           {cargando ? (
             <ActivityIndicator color={colors.white} />
           ) : (
-            <Text style={globalStyles.buttonText}>Registrarse</Text>
+            <Text style={globalStyles.buttonText}>Crear Cuenta</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.linkVolver}>Volver al inicio de sesión</Text>
+          <Text style={styles.linkLogin}>
+            ¿Ya tienes cuenta? Inicia sesión aquí
+          </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  titulo: {
+    fontSize: fontSize.xxxl,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: spacing.sm,
+    marginTop: spacing.xxl * 2,
+    color: colors.textPrimary,
+  },
+  subtitulo: {
+    fontSize: fontSize.md,
+    textAlign: "center",
+    marginBottom: spacing.xl,
+    color: colors.textSecondary,
+  },
   labelRol: {
     fontSize: fontSize.md,
-    marginBottom: spacing.sm,
+    fontWeight: "600",
     color: colors.textPrimary,
-    fontWeight: "500",
+    marginBottom: spacing.sm,
   },
   contenedorRoles: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.md,
     marginBottom: spacing.lg,
   },
   botonRol: {
     flex: 1,
     padding: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: colors.border,
-    alignItems: "center",
     backgroundColor: colors.white,
+    alignItems: "center",
   },
   botonRolActivo: {
     borderColor: colors.primary,
     backgroundColor: colors.primaryLight,
   },
   textoRol: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.lg,
+    fontWeight: "bold",
     color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   textoRolActivo: {
     color: colors.primary,
-    fontWeight: "bold",
   },
-  linkVolver: {
+  descripcionRol: {
+    fontSize: fontSize.xs,
+    color: colors.textTertiary,
+    textAlign: "center",
+  },
+  botonRegistro: {
+    marginTop: spacing.sm,
+  },
+  linkLogin: {
     textAlign: "center",
     marginTop: spacing.lg,
     color: colors.primary,
     fontSize: fontSize.sm,
   },
 });
-

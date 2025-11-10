@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,15 +11,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../../../src/presentation/hooks/useAuth";
-import { useRecipes } from "../../../src/presentation/hooks/useRecipes";
-import { globalStyles } from "../../../src/styles/globalStyles";
-import { colors, fontSize, spacing } from "../../../src/styles/theme";
+import { useAuth } from "../../src/presentation/hooks/useAuth";
+import { useRecipes } from "../../src/presentation/hooks/useRecipes";
+import { globalStyles } from "../../src/styles/globalStyles";
+import { borderRadius, colors, fontSize, spacing } from "../../src/styles/theme";
 
 export default function EditarRecetaScreen() {
   const { id } = useLocalSearchParams();
   const { usuario } = useAuth();
-  const { recetas, actualizar } = useRecipes();
+  const { recetas, actualizar, seleccionarImagen, tomarFoto } = useRecipes();
   const router = useRouter();
 
   const receta = recetas.find((r) => r.id === id);
@@ -27,18 +28,18 @@ export default function EditarRecetaScreen() {
   const [descripcion, setDescripcion] = useState("");
   const [ingrediente, setIngrediente] = useState("");
   const [ingredientes, setIngredientes] = useState<string[]>([]);
+  const [imagenUri, setImagenUri] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
-  // Cargar datos de la receta al iniciar
   useEffect(() => {
     if (receta) {
       setTitulo(receta.titulo);
       setDescripcion(receta.descripcion);
       setIngredientes(receta.ingredientes);
+      setImagenUri(receta.imagen_url || null);
     }
   }, [receta]);
 
-  // Validar que el usuario es el dueño
   if (!receta) {
     return (
       <View style={globalStyles.containerCentered}>
@@ -74,6 +75,44 @@ export default function EditarRecetaScreen() {
     setIngredientes(ingredientes.filter((_, i) => i !== index));
   };
 
+  // 🆕 Seleccionar imagen de galería
+  const handleSeleccionarImagen = async () => {
+    const uri = await seleccionarImagen();
+    if (uri) {
+      setImagenUri(uri);
+    }
+  };
+
+  // 🆕 Tomar foto con cámara
+  const handleTomarFoto = async () => {
+    const uri = await tomarFoto();
+    if (uri) {
+      setImagenUri(uri);
+    }
+  };
+
+  // 🆕 Mostrar opciones de imagen
+  const handleOpcionesImagen = () => {
+    Alert.alert(
+      "Cambiar Imagen",
+      "¿Cómo quieres agregar la imagen?",
+      [
+        {
+          text: "Cámara",
+          onPress: handleTomarFoto,
+        },
+        {
+          text: "Galería",
+          onPress: handleSeleccionarImagen,
+        },
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
   const handleGuardar = async () => {
     if (!titulo || !descripcion || ingredientes.length === 0) {
       Alert.alert("Error", "Completa todos los campos");
@@ -81,12 +120,18 @@ export default function EditarRecetaScreen() {
     }
 
     setCargando(true);
+    
+    // 🆕 Pasar imagenUri solo si cambió
+    const imagenParaActualizar = imagenUri !== receta.imagen_url ? imagenUri || undefined : undefined;
+    
     const resultado = await actualizar(
       receta.id,
       titulo,
       descripcion,
-      ingredientes
+      ingredientes,
+      imagenParaActualizar
     );
+    
     setCargando(false);
 
     if (resultado.success) {
@@ -156,9 +201,21 @@ export default function EditarRecetaScreen() {
           ))}
         </View>
 
-        <Text style={styles.notaImagen}>
-          💡 Nota: La imagen no se puede cambiar por ahora
-        </Text>
+        {/* 🆕 SECCIÓN DE IMAGEN */}
+        <Text style={globalStyles.subtitle}>Imagen:</Text>
+        
+        {imagenUri && (
+          <Image source={{ uri: imagenUri }} style={styles.vistaPrevia} />
+        )}
+
+        <TouchableOpacity
+          style={[globalStyles.button, globalStyles.buttonSecondary]}
+          onPress={handleOpcionesImagen}
+        >
+          <Text style={globalStyles.buttonText}>
+            {imagenUri ? "📷 Cambiar Imagen" : "📷 Agregar Imagen"}
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[
@@ -226,14 +283,14 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: "bold",
   },
-  notaImagen: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-    fontStyle: "italic",
+  vistaPrevia: {
+    width: "100%",
+    height: 200,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
   },
   botonGuardar: {
     padding: spacing.lg,
+    marginTop: spacing.md,
   },
 });
-

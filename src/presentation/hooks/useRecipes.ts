@@ -2,32 +2,19 @@ import { useEffect, useState } from "react";
 import { Receta } from "../../domain/models/Receta";
 import { RecipesUseCase } from "../../domain/useCases/recipes/RecipesUseCase";
 
-// Instancia única del UseCase
 const recipesUseCase = new RecipesUseCase();
 
 /**
  * useRecipes - Hook de Gestión de Recetas
- *
- * Maneja el estado de las recetas y proporciona métodos
- * para crear, actualizar, eliminar y buscar.
- *
- * ESTADOS:
- * - recetas: Array de recetas
- * - cargando: Boolean de carga
- *
- * MÉTODOS:
- * - cargarRecetas: Obtiene todas las recetas
- * - buscar: Filtra por ingrediente
- * - crear: Crea nueva receta
- * - actualizar: Modifica receta existente
- * - eliminar: Borra receta
- * - seleccionarImagen: Abre galería
+ * 
+ * ACTUALIZACIONES:
+ * - actualizar() ahora acepta imagenUri opcional
+ * - Nuevo método: tomarFoto()
  */
 export function useRecipes() {
   const [recetas, setRecetas] = useState<Receta[]>([]);
   const [cargando, setCargando] = useState(true);
 
-  // AL MONTAR: Cargar todas las recetas
   useEffect(() => {
     cargarRecetas();
   }, []);
@@ -54,7 +41,6 @@ export function useRecipes() {
 
   /**
    * Crear nueva receta
-   * Al terminar, recarga la lista automáticamente
    */
   const crear = async (
     titulo: string,
@@ -71,7 +57,6 @@ export function useRecipes() {
       imagenUri
     );
 
-    // Si fue exitoso, recargar lista
     if (resultado.success) {
       await cargarRecetas();
     }
@@ -80,19 +65,21 @@ export function useRecipes() {
   };
 
   /**
-   * Actualizar receta existente
+   * 🆕 Actualizar receta existente - AHORA CON IMAGEN
    */
   const actualizar = async (
     id: string,
     titulo: string,
     descripcion: string,
-    ingredientes: string[]
+    ingredientes: string[],
+    imagenUri?: string // 👈 Nuevo parámetro opcional
   ) => {
     const resultado = await recipesUseCase.actualizarReceta(
       id,
       titulo,
       descripcion,
-      ingredientes
+      ingredientes,
+      imagenUri
     );
 
     if (resultado.success) {
@@ -122,6 +109,13 @@ export function useRecipes() {
     return await recipesUseCase.seleccionarImagen();
   };
 
+  /**
+   * 🆕 Tomar foto con la cámara
+   */
+  const tomarFoto = async () => {
+    return await recipesUseCase.tomarFoto();
+  };
+
   return {
     recetas,
     cargando,
@@ -131,6 +125,6 @@ export function useRecipes() {
     actualizar,
     eliminar,
     seleccionarImagen,
+    tomarFoto, // 👈 Nuevo método exportado
   };
 }
-

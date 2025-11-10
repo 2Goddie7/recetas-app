@@ -11,19 +11,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../../../src/presentation/hooks/useAuth";
-import { useRecipes } from "../../../src/presentation/hooks/useRecipes";
-import { globalStyles } from "../../../src/styles/globalStyles";
+import { useAuth } from "../../src/presentation/hooks/useAuth";
+import { useRecipes } from "../../src/presentation/hooks/useRecipes";
+import { globalStyles } from "../../src/styles/globalStyles";
 import {
   borderRadius,
   colors,
   fontSize,
   spacing,
-} from "../../../src/styles/theme";
+} from "../../src/styles/theme";
 
 export default function CrearRecetaScreen() {
   const { usuario, esChef } = useAuth();
-  const { crear, seleccionarImagen } = useRecipes();
+  const { crear, seleccionarImagen, tomarFoto } = useRecipes();
   const router = useRouter();
 
   const [titulo, setTitulo] = useState("");
@@ -44,8 +44,37 @@ export default function CrearRecetaScreen() {
     setIngredientes(ingredientes.filter((_, i) => i !== index));
   };
 
+  // 🆕 Mostrar opciones: Cámara o Galería
+  const handleOpcionesImagen = () => {
+    Alert.alert(
+      "Agregar Imagen",
+      "¿Cómo quieres agregar la imagen?",
+      [
+        {
+          text: "📷 Tomar Foto",
+          onPress: handleTomarFoto,
+        },
+        {
+          text: "🖼️ Galería",
+          onPress: handleSeleccionarImagen,
+        },
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
   const handleSeleccionarImagen = async () => {
     const uri = await seleccionarImagen();
+    if (uri) {
+      setImagenUri(uri);
+    }
+  };
+
+  const handleTomarFoto = async () => {
+    const uri = await tomarFoto();
     if (uri) {
       setImagenUri(uri);
     }
@@ -159,9 +188,10 @@ export default function CrearRecetaScreen() {
           ))}
         </View>
 
+        {/* 🆕 BOTÓN CON OPCIONES */}
         <TouchableOpacity
           style={[globalStyles.button, globalStyles.buttonSecondary]}
-          onPress={handleSeleccionarImagen}
+          onPress={handleOpcionesImagen}
         >
           <Text style={globalStyles.buttonText}>
             {imagenUri ? "📷 Cambiar Foto" : "📷 Agregar Foto"}
@@ -249,5 +279,3 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
 });
-
-

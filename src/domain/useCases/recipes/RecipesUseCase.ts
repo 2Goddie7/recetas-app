@@ -2,17 +2,6 @@ import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/src/data/services/supabaseClient";
 import { Receta } from "../../models/Receta";
 
-/**
- * RecipesUseCase - Caso de Uso de Recetas
- *
- * Gestiona toda la lógica de negocio de recetas:
- * - Listar recetas
- * - Buscar por ingrediente
- * - Crear, actualizar, eliminar
- * - Subir imágenes
- * - Seleccionar imagen de galería
- */
-
 export class RecipesUseCase {
   /**
    * Obtener todas las recetas ordenadas por más recientes
@@ -21,7 +10,7 @@ export class RecipesUseCase {
     const { data, error } = await supabase
       .from("recetas")
       .select("*")
-      .order("created_at", { ascending: false }); // Más recientes primero
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error al obtener recetas:", error);
@@ -33,10 +22,6 @@ export class RecipesUseCase {
 
   /**
    * Buscar recetas que contengan un ingrediente específico
-   *
-   * Usa el operador 'contains' de PostgreSQL para buscar en arrays
-   *
-   * @param ingrediente - Ingrediente a buscar
    */
   async buscarPorIngrediente(ingrediente: string): Promise<Receta[]> {
     const { data, error } = await supabase
@@ -55,12 +40,6 @@ export class RecipesUseCase {
 
   /**
    * Crear nueva receta
-   *
-   * @param titulo - Título de la receta
-   * @param descripcion - Descripción detallada
-   * @param ingredientes - Array de ingredientes
-   * @param chefId - ID del chef que la crea
-   * @param imagenUri - URI local de la imagen (opcional)
    */
   async crearReceta(
     titulo: string,
@@ -72,12 +51,10 @@ export class RecipesUseCase {
     try {
       let imagenUrl: string | null = null;
 
-      // PASO 1: Subir imagen si existe
       if (imagenUri) {
         imagenUrl = await this.subirImagen(imagenUri);
       }
 
-      // PASO 2: Insertar receta en base de datos
       const { data, error } = await supabase
         .from("recetas")
         .insert({
@@ -99,27 +76,40 @@ export class RecipesUseCase {
   }
 
   /**
-   * Actualizar receta existente
-   *
-   * @param id - ID de la receta
-   * @param titulo - Nuevo título
-   * @param descripcion - Nueva descripción
-   * @param ingredientes - Nuevos ingredientes
+   * 🆕 Actualizar receta CON IMAGEN
+   * 
+   * NUEVO: Ahora permite actualizar la imagen de la receta
    */
   async actualizarReceta(
     id: string,
     titulo: string,
     descripcion: string,
-    ingredientes: string[]
+    ingredientes: string[],
+    imagenUri?: string // 👈 Nuevo parámetro opcional
   ) {
     try {
+      let imagenUrl: string | undefined = undefined;
+
+      // Si se proporciona una nueva imagen, subirla
+      if (imagenUri) {
+        imagenUrl = await this.subirImagen(imagenUri);
+      }
+
+      // Preparar datos de actualización
+      const updateData: any = {
+        titulo,
+        descripcion,
+        ingredientes,
+      };
+
+      // Solo actualizar imagen_url si se subió una nueva imagen
+      if (imagenUrl) {
+        updateData.imagen_url = imagenUrl;
+      }
+
       const { data, error } = await supabase
         .from("recetas")
-        .update({
-          titulo,
-          descripcion,
-          ingredientes,
-        })
+        .update(updateData)
         .eq("id", id)
         .select()
         .single();
@@ -134,8 +124,6 @@ export class RecipesUseCase {
 
   /**
    * Eliminar receta
-   *
-   * @param id - ID de la receta a eliminar
    */
   async eliminarReceta(id: string) {
     try {
@@ -151,37 +139,24 @@ export class RecipesUseCase {
 
   /**
    * Subir imagen al Storage de Supabase
-   *
-   * PROCESO:
-   * 1. Convertir URI local a Blob
-   * 2. Generar nombre único
-   * 3. Subir a bucket "recetas-fotos"
-   * 4. Obtener URL pública
-   *
-   * @param uri - URI local de la imagen
-   * @returns URL pública de la imagen subida
    */
   private async subirImagen(uri: string): Promise<string> {
     try {
-      // PASO 1: Convertir imagen a Blob
       const response = await fetch(uri);
       const blob = await response.blob();
 
-      // PASO 2: Generar nombre único
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
 
-      // PASO 3: Subir a Supabase Storage
       const { data, error } = await supabase.storage
         .from("recetas-fotos")
         .upload(fileName, blob, {
           contentType: "image/jpeg",
-          cacheControl: "3600",  // Cache de 1 hora
-          upsert: false,         // No sobrescribir si existe
+          cacheControl: "3600",
+          upsert: false,
         });
 
       if (error) throw error;
 
-      // PASO 4: Obtener URL pública
       const {
         data: { publicUrl },
       } = supabase.storage.from("recetas-fotos").getPublicUrl(data.path);
@@ -195,16 +170,9 @@ export class RecipesUseCase {
 
   /**
    * Seleccionar imagen de la galería
-   *
-   * PROCESO:
-   * 1. Pedir permisos de galería
-   * 2. Abrir selector de imágenes
-   * 3. Permitir edición (recorte)
-   * 4. Retornar URI local
    */
   async seleccionarImagen(): Promise<string | null> {
     try {
-      // PASO 1: Pedir permisos
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== "granted") {
@@ -212,12 +180,11 @@ export class RecipesUseCase {
         return null;
       }
 
-      // PASO 2: Abrir galería
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: "images",
-        allowsEditing: true,  // Permitir recortar
-        aspect: [4, 3],       // Proporción 4:3
-        quality: 0.8,         // Calidad 80% (balance tamaño/calidad)
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
       });
 
       if (!result.canceled) {
@@ -227,6 +194,39 @@ export class RecipesUseCase {
       return null;
     } catch (error) {
       console.error("Error al seleccionar imagen:", error);
+      return null;
+    }
+  }
+
+  /**
+   * 🆕 Tomar foto con la cámara
+   * 
+   * NUEVO: Permite capturar fotos directamente con la cámara
+   */
+  async tomarFoto(): Promise<string | null> {
+    try {
+      // Pedir permisos de cámara
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (status !== "granted") {
+        alert("Necesitamos permisos para acceder a tu cámara");
+        return null;
+      }
+
+      // Abrir cámara
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        return result.assets[0].uri;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error al tomar foto:", error);
       return null;
     }
   }
